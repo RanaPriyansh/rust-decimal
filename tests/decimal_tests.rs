@@ -3532,6 +3532,28 @@ fn it_can_calculate_signum() {
 }
 
 #[test]
+fn signed_zero_is_neither_positive_nor_negative() {
+    // #787: num_traits::Signed::is_positive / is_negative must be false for zero
+    // (and negative zero), matching the trait contract and signum() above.
+    // Called through the trait: the deprecated inherent Decimal::is_positive /
+    // is_negative shadow the trait methods in method-call position on this branch.
+    fn via_bound<T: Signed>(x: &T) -> (bool, bool) {
+        (x.is_positive(), x.is_negative())
+    }
+
+    let mut negative_zero = Decimal::ZERO;
+    negative_zero.set_sign_negative(true);
+
+    assert_eq!(via_bound(&Decimal::ZERO), (false, false));
+    assert_eq!(via_bound(&negative_zero), (false, false));
+    assert_eq!(via_bound(&Decimal::ONE), (true, false));
+    assert_eq!(via_bound(&Decimal::NEGATIVE_ONE), (false, true));
+
+    assert!(!Signed::is_positive(&Decimal::ZERO));
+    assert!(!Signed::is_negative(&Decimal::ZERO));
+}
+
+#[test]
 fn it_can_calculate_abs_sub() {
     let tests = &[
         ("123", "124", 0),
