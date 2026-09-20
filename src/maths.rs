@@ -311,19 +311,24 @@ impl MathematicalOps for Decimal {
         if result.is_zero() {
             result = *self;
         }
-        let mut last = result + Decimal::ONE;
-
-        // Keep going while the difference is larger than the tolerance
+        let mut previous = None;
         let mut circuit_breaker = 0;
-        while last != result {
+        loop {
             circuit_breaker += 1;
             assert!(circuit_breaker < 1000, "geo mean circuit breaker");
 
-            last = result;
-            result = (result + self / result) / Decimal::TWO;
+            let next = (result + self / result) / Decimal::TWO;
+            if next == result {
+                return Some(next);
+            }
+            if let Some(last) = previous {
+                if next == last && next.scale() == last.scale() {
+                    return Some(if next > result { next } else { result });
+                }
+            }
+            previous = Some(result);
+            result = next;
         }
-
-        Some(result)
     }
 
     #[cfg(feature = "maths-nopanic")]
